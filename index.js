@@ -1,12 +1,12 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 
 // middlewire
-app.use(express());
+app.use(express.json());
 app.use(cors());
 
 const uri = `mongodb+srv://${process.env.Db_Name}:${process.env.Db_Pass}@cluster0.fgiq9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -35,6 +35,25 @@ async function run() {
     app.get("/allmarathons", async (req, res) => {
       const cursor = marathonCollection.find().limit(6);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+    app.get("/allmarathons/marathons", async (req, res) => {
+      const cursor = marathonCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    app.get("/details/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await marathonCollection.findOne(query);
+      res.send(result);
+    });
+
+    // add marathon
+    app.post("/addmarathons", async (req, res) => {
+      const application = req.body;
+      console.log(application);
+      const result = await marathonCollection.insertOne(application);
       res.send(result);
     });
 
