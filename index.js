@@ -32,6 +32,10 @@ async function run() {
       .db("Marathon")
       .collection("MarathonCollection");
 
+    const marathonApplication = client
+      .db("Marathon")
+      .collection("MarathonApplication");
+
     app.get("/allmarathons", async (req, res) => {
       const cursor = marathonCollection.find().limit(6);
       const result = await cursor.toArray();
@@ -49,11 +53,39 @@ async function run() {
       res.send(result);
     });
 
+    // find marathon application by user email
+    app.get("/marathon/marthonApplication", async (req, res) => {
+      const email = req.query.email;
+      const qurey = { email: email };
+      const cursor = marathonApplication.find(qurey);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     // add marathon
     app.post("/addmarathons", async (req, res) => {
       const application = req.body;
-      console.log(application);
       const result = await marathonCollection.insertOne(application);
+      res.send(result);
+    });
+
+    // marathon Applicaiton
+    app.post("/marathonApplication", async (req, res) => {
+      const application = req.body;
+      const result = await marathonApplication.insertOne(application);
+      const id = application.marathonId;
+      const query = { _id: new ObjectId(id) };
+      const marathon = await marathonCollection.findOne(query);
+      let newCount = marathon.totalRegistationCount + 1;
+      console.log(newCount);
+      // now update the marathon collection
+
+      const updateDoc = {
+        $set: {
+          totalRegistrationCount: newCount,
+        },
+      };
+      const updateResult = await marathonCollection.updateOne(query, updateDoc);
       res.send(result);
     });
 
