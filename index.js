@@ -53,6 +53,13 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await marathonApplication.deleteOne(qurey);
+      res.send(result);
+    });
+
     // find marathon application by user email
     app.get("/marathon/marthonApplication", async (req, res) => {
       const email = req.query.email;
@@ -82,7 +89,7 @@ async function run() {
 
       const updateDoc = {
         $set: {
-          totalRegistrationCount: newCount,
+          totalRegistationCount: newCount,
         },
       };
       const updateResult = await marathonCollection.updateOne(query, updateDoc);
