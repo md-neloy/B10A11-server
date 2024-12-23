@@ -53,6 +53,27 @@ async function run() {
       res.send(result);
     });
 
+    app.put("/updateApplication/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateApplication = req.body;
+      const qurey = { _id: new ObjectId(id) };
+      const option = { upsert: true };
+      const updateData = {
+        $set: {
+          firstName: updateApplication.firstName,
+          lastName: updateApplication.lastName,
+          number: updateApplication.number,
+          location: updateApplication.location,
+        },
+      };
+      const result = await marathonApplication.updateOne(
+        qurey,
+        updateData,
+        option
+      );
+      res.send(result);
+    });
+
     app.delete("/delete/:id", async (req, res) => {
       const id = req.params.id;
       const qurey = { _id: new ObjectId(id) };
