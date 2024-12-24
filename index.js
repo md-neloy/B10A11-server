@@ -44,7 +44,6 @@ async function run() {
     app.get("/allmarathons/marathons", async (req, res) => {
       const email = req.query.email;
       const query = { creator: email } || {};
-      console.log(query);
       const cursor = marathonCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
@@ -56,6 +55,32 @@ async function run() {
       res.send(result);
     });
 
+    app.put("/updateCollection/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateMarathon = req.body;
+      const qurey = { _id: new ObjectId(id) };
+      const option = { upsert: true };
+      const updateData = {
+        $set: {
+          title: updateMarathon.title,
+          startRegistrationDate: updateMarathon.startRegistrationDate,
+          endRegistrationDate: updateMarathon.endRegistrationDate,
+          marathonStartDate: updateMarathon.marathonStartDate,
+          location: updateMarathon.location,
+          runningDistance: updateMarathon.runningDistance,
+          description: updateMarathon.description,
+          runningDistance: updateMarathon.runningDistance,
+          marathonImage: updateMarathon.marathonImage,
+        },
+      };
+      console.log(updateData);
+      const result = await marathonCollection.updateOne(
+        qurey,
+        updateData,
+        option
+      );
+      res.send(result);
+    });
     app.put("/updateApplication/:id", async (req, res) => {
       const id = req.params.id;
       const updateApplication = req.body;
