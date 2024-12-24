@@ -41,13 +41,20 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+
     app.get("/allmarathons/marathons", async (req, res) => {
       const email = req.query.email;
-      const query = { creator: email } || {};
-      const cursor = marathonCollection.find(query);
+      const sortOrder = req.query.sortOrder || "desc";
+      const sortQuery =
+        sortOrder === "asc" ? { createdAt: 1 } : { createdAt: -1 };
+
+      const query = email ? { creator: email } : {};
+
+      const cursor = marathonCollection.find(query).sort(sortQuery);
       const result = await cursor.toArray();
       res.send(result);
     });
+
     app.get("/details/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -58,7 +65,7 @@ async function run() {
     app.put("/updateCollection/:id", async (req, res) => {
       const id = req.params.id;
       const updateMarathon = req.body;
-      const qurey = { _id: new ObjectId(id) };
+      const query = { _id: new ObjectId(id) };
       const option = { upsert: true };
       const updateData = {
         $set: {
@@ -73,9 +80,15 @@ async function run() {
           marathonImage: updateMarathon.marathonImage,
         },
       };
-      console.log(updateData);
+      const query2 = { marathonId: id };
+      const update2 = {
+        $set: {
+          title: updateMarathon.title,
+        },
+      };
+      const result2 = await marathonApplication.updateMany(query2, update2);
       const result = await marathonCollection.updateOne(
-        qurey,
+        query,
         updateData,
         option
       );
@@ -117,8 +130,12 @@ async function run() {
 
     // find marathon application by user email
     app.get("/marathon/marthonApplication", async (req, res) => {
-      const email = req.query.email;
+      const { email, title } = req.query;
       const qurey = { email: email };
+      if (title) {
+        qurey.title = { $regex: title, $options: "i" };
+      }
+      console.log(qurey);
       const cursor = marathonApplication.find(qurey);
       const result = await cursor.toArray();
       res.send(result);
