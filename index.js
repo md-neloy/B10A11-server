@@ -42,7 +42,10 @@ async function run() {
       res.send(result);
     });
     app.get("/allmarathons/marathons", async (req, res) => {
-      const cursor = marathonCollection.find();
+      const email = req.query.email;
+      const query = { creator: email } || {};
+      console.log(query);
+      const cursor = marathonCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -78,6 +81,12 @@ async function run() {
       const id = req.params.id;
       const qurey = { _id: new ObjectId(id) };
       const result = await marathonApplication.deleteOne(qurey);
+      res.send(result);
+    });
+    app.delete("/delete/marathonCollection/:id", async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await marathonCollection.deleteOne(qurey);
       res.send(result);
     });
 
