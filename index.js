@@ -117,7 +117,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/details/:id", async (req, res) => {
+    app.get("/details/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await marathonCollection.findOne(query);
