@@ -1,18 +1,46 @@
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 
 // middlewire
 app.use(express.json());
-app.use(cors());
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://marathon-guide.web.app",
+      "https://marathon-guide.firebaseapp.com",
+    ],
+    credentials: true,
+  })
+);
 
 const uri = `mongodb+srv://${process.env.Db_Name}:${process.env.Db_Pass}@cluster0.fgiq9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 app.get("/", (req, res) => {
   res.send("Marathon is On going");
 });
+
+// verify the jwt token
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.jwToken;
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  // verify the token
+  jwt.verify(token, process.env.jwt_Secrate_key, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -23,11 +51,6 @@ const client = new MongoClient(uri, {
 });
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-
     const marathonCollection = client
       .db("Marathon")
       .collection("MarathonCollection");
@@ -36,21 +59,60 @@ async function run() {
       .db("Marathon")
       .collection("MarathonApplication");
 
-    app.get("/allmarathons", async (req, res) => {
+    // Auth Related APIs
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.jwt_Secrate_key, {
+        expiresIn: "24hr",
+      });
+      res
+        .cookie("jwToken", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ [`success token`]: true });
+    });
+
+    // jwt remove
+    app.post("/jwtLogout", async (req, res) => {
+      res
+        .clearCookie("jwToken", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({
+          ["successfully Logout:"]: true,
+        });
+    });
+
+    app.get("/marathonsLimit", async (req, res) => {
       const cursor = marathonCollection.find().limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.get("/allmarathons/marathons", async (req, res) => {
-      const email = req.query.email;
+    app.get("/allmarathons", async (req, res) => {
       const sortOrder = req.query.sortOrder || "desc";
       const sortQuery =
         sortOrder === "asc" ? { createdAt: 1 } : { createdAt: -1 };
 
+      const cursor = marathonCollection.find().sort(sortQuery);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/allmarathons/marathons", verifyToken, async (req, res) => {
+      const email = req.query.email;
+      if (email) {
+        if (req.user?.email !== email) {
+          res.status(403).send({ message: "forbidden accesss" });
+        }
+      }
       const query = email ? { creator: email } : {};
 
-      const cursor = marathonCollection.find(query).sort(sortQuery);
+      const cursor = marathonCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -129,20 +191,25 @@ async function run() {
     });
 
     // find marathon application by user email
-    app.get("/marathon/marthonApplication", async (req, res) => {
+    app.get("/marathon/marthonApplication", verifyToken, async (req, res) => {
       const { email, title } = req.query;
       const qurey = { email: email };
+      if (req.user?.email !== email) {
+        res.status(403).send({ message: "forbidden accesss" });
+      }
       if (title) {
         qurey.title = { $regex: title, $options: "i" };
       }
-      console.log(qurey);
+
       const cursor = marathonApplication.find(qurey);
       const result = await cursor.toArray();
+      console.log(result);
+
       res.send(result);
     });
 
     // add marathon
-    app.post("/addmarathons", async (req, res) => {
+    app.post("/addmarathons", verifyToken, async (req, res) => {
       const application = req.body;
       const result = await marathonCollection.insertOne(application);
       res.send(result);
