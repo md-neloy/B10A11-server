@@ -37,7 +37,7 @@ const verifyToken = (req, res, next) => {
     if (err) {
       return res.status(401).send({ message: "unauthorized access" });
     }
-    req.user = decoded;
+    req.decoded = decoded;
     next();
   });
 };
@@ -105,8 +105,9 @@ async function run() {
 
     app.get("/allmarathons/marathons", verifyToken, async (req, res) => {
       const email = req.query.email;
+      console.log(req.decoded.email);
       if (email) {
-        if (req.user?.email !== email) {
+        if (req.decoded.email !== email) {
           res.status(403).send({ message: "forbidden accesss" });
         }
       }
@@ -194,7 +195,7 @@ async function run() {
     app.get("/marathon/marthonApplication", verifyToken, async (req, res) => {
       const { email, title } = req.query;
       const qurey = { email: email };
-      if (req.user?.email !== email) {
+      if (req.decoded.email !== email) {
         res.status(403).send({ message: "forbidden accesss" });
       }
       if (title) {
@@ -203,7 +204,6 @@ async function run() {
 
       const cursor = marathonApplication.find(qurey);
       const result = await cursor.toArray();
-      console.log(result);
 
       res.send(result);
     });
